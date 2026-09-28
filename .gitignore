@@ -22,6 +22,11 @@ catkin_ws/build/
 catkin_ws/devel/
 catkin_ws/install/
 catkin_ws/log/
+[Ll]ibrary/
+[Tt]emp/
+[Oo]bj/
+[Bb]uild/
+UserSettings/
 *.bag
 *.pyc
 __pycache__/
