@@ -5,6 +5,8 @@ from geometry_msgs.msg import Twist
 from nav_msgs.msg import Odometry
 from tf.transformations import euler_from_quaternion
 
+import argparse
+
 class Milestone1Controller:
     def __init__(self, target_x, target_y):
         rospy.init_node('milestone1_controller', anonymous=True)
@@ -77,8 +79,31 @@ class Milestone1Controller:
             rate.sleep()
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser(
+        description='Move robot to target X/Y position'
+    )
+
+    parser.add_argument(
+        'target_x',
+        type=float,
+        help='Target X coordinate'
+    )
+
+    parser.add_argument(
+        'target_y',
+        type=float,
+        help='Target Y coordinate'
+    )
+
+    args = parser.parse_args()
+
     try:
-        controller = Milestone1Controller(target_x=2.0, target_y=1.5)
+        controller = Milestone1Controller(
+            target_x=args.target_x,
+            target_y=args.target_y
+        )
+
         controller.run()
+
     except rospy.ROSInterruptException:
         pass
