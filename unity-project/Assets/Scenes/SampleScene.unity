@@ -1135,7 +1135,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 500ff36e10ab7b695862d322696b5b63, type: 2}
+  - {fileID: 2100000, guid: 618e3814680483623b09a2d38673e378, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -2801,6 +2801,7 @@ GameObject:
   - component: {fileID: 1433314660}
   - component: {fileID: 1433314659}
   - component: {fileID: 1433314658}
+  - component: {fileID: 1433314661}
   m_Layer: 0
   m_Name: laser_link
   m_TagString: Untagged
@@ -2920,6 +2921,29 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   IsBaseLink: 0
+--- !u!114 &1433314661
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1433314656}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 47e1511ad8d76db808990a58f295c988, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  topic: /scan
+  PublishPeriodSeconds: 0.1
+  RangeMetersMin: 0
+  RangeMetersMax: 1000
+  ScanAngleStartDegrees: -45
+  ScanAngleEndDegrees: 45
+  ScanOffsetAfterPublish: 0
+  NumMeasurementsPerScan: 10
+  TimeBetweenMeasurementsSeconds: 0.01
+  LayerMaskName: TurtleBot3Manual
+  FrameId: base_scan
 --- !u!1 &1473697069
 GameObject:
   m_ObjectHideFlags: 8
