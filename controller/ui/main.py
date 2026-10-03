@@ -1,18 +1,16 @@
 #!/usr/bin/env python3
 import sys
 from pathlib import Path
-from .PosePane import PosePane
-from .NavigatePane import NavigationPane
+import signal
 import subprocess
 
+from .PosePane import PosePane
+from .NavigatePane import NavigationPane
+
 from PyQt5.QtWidgets import (
-    QApplication, QWidget, QVBoxLayout, QHBoxLayout, 
-    QLabel, QLineEdit, QPushButton, QCheckBox,
-    QScrollArea, QGroupBox, QButtonGroup, QFrame,
-    QMessageBox
+    QApplication, QWidget, QVBoxLayout, QMessageBox, QFrame
 )
-from PyQt5.QtCore import pyqtSignal, QObject, QProcess
-from PyQt5.QtGui import QDoubleValidator
+from PyQt5.QtCore import pyqtSignal, QObject,  QTimer
 
 
 # ------- EXECUTION DIR -------
@@ -42,18 +40,19 @@ class RobotControllerUI(QWidget):
 
         main_layout = QVBoxLayout(self)
 
-        # =====================================================================
-        # 1. TOP FIXED SECTION: Display & System Selectors
-        # =====================================================================
         pose_frame = PosePane()
+        pose_frame.setFrameShape(QFrame.Box)
+        pose_frame.setFrameShadow(QFrame.Raised)
+        pose_frame.setLineWidth(2)
         main_layout.addWidget(pose_frame)
 
-        # =====================================================================
-        # 2. SCROLLABLE MIDDLE SECTION: Inputs & Controls
-        # =====================================================================
         navigate_frame = NavigationPane(CONTROL_ROBOT_PATH)
+        navigate_frame.setFrameShape(QFrame.Box)
+        navigate_frame.setFrameShadow(QFrame.Raised)
+        navigate_frame.setLineWidth(2)
         main_layout.addWidget(navigate_frame)
     
+
 
 
 def launch_ros_endpoint():
@@ -85,9 +84,16 @@ def launch_ros_endpoint():
 
 
 
-
 if __name__ == "__main__":
+    # 1. Allow Python to exit on SIGINT
+    signal.signal(signal.SIGINT, signal.SIG_DFL)
+
     app = QApplication(sys.argv)
+    
+    # 2. Add a periodic timer to wake up Python's interpreter
+    timer = QTimer()
+    timer.start(500)  # Fires every 500ms
+    timer.timeout.connect(lambda: None)  # Dummy callback keeps Python responsive to signal
 
     launch_ros_endpoint()
 

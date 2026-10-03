@@ -31,3 +31,7 @@ UserSettings/
 *.pyc
 __pycache__/
 .catkin_workspace
+
+# ---- device ----
+.vscode
+unity-project/

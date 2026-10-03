@@ -2,10 +2,11 @@ import math
 import rospy
 from nav_msgs.msg import Odometry
 from .CoordinateConversion import *
+from .CustomUI import *
 
 from PyQt5.QtWidgets import (
-    QVBoxLayout, QHBoxLayout, QLabel, 
-    QCheckBox, QFrame, QButtonGroup
+    QVBoxLayout, QLabel, 
+    QCheckBox, QFrame
 )
 from PyQt5.QtCore import pyqtSignal, QObject
 
@@ -18,106 +19,102 @@ class RosBridgeSignals(QObject):
 class PosePane(QFrame):
     def __init__(self):
         super().__init__()
-        # self.current_ros_pose = (None, None, None, None) # x, y, z, yaw
         self.signals = RosBridgeSignals()
         self.signals.odom_received.connect(self.update_odom_display)
 
-        self.init_ui()
+        self.init_fields()
+        self.configure_fields()
+        self.lay_layout()
         self.init_ros()
 
 
+    # -------------------- INIT CONFIGURATION -------------------- 
     def init_ros(self):
         rospy.init_node("robot_controller_gui", anonymous=True, disable_signals=True)
         rospy.Subscriber("/odom", Odometry, self.odom_callback)
 
-    def init_ui(self):
-        top_layout = QVBoxLayout(self)
-
-        # Coordinate System Selector Checkboxes
-        coor_sys_layout = QHBoxLayout()
-        self.chk_ros = QCheckBox("ROS Coordinates")
-        self.chk_unity = QCheckBox("Unity Coordinates")
-        self.chk_ros.setChecked(True)
-        self.chk_unity.setChecked(True)
-
-        coor_sys_layout.addWidget(QLabel("Coordinate System: "))
-        coor_sys_layout.addWidget(self.chk_ros)
-        coor_sys_layout.addWidget(self.chk_unity)
-
-
-        # Unit Selector Checkbox
-        unit_layout = QHBoxLayout()
+    def init_fields(self):
+        self.check_ros = QCheckBox("ROS Coordinates")
+        self.check_unity = QCheckBox("Unity Coordinates")
         self.chk_rad = QCheckBox("Rad")
         self.chk_deg = QCheckBox("Degree")
-        self.angle_option = QButtonGroup(self)
-        self.angle_option.setExclusive(True)
-        self.angle_option.addButton(self.chk_deg)
-        self.angle_option.addButton(self.chk_rad)
+        # Labels for Position and Yaw Display
+        self.label_ros_coords = QLabel("ROS (x, y, z | yaw): N/A")
+        self.label_unity_coords = QLabel("Unity (x, y, z | yaw): N/A")
+
+    def configure_fields(self):
+        self.check_ros.setChecked(True)
+        self.check_unity.setChecked(True)
+        self.check_ros.stateChanged.connect(self.check_ros_state_change)
+        self.check_unity.stateChanged.connect(self.check_unity_state_change)
+
         self.chk_deg.setChecked(True)
 
-        unit_layout.addWidget(QLabel("Angle unit: "))
-        unit_layout.addWidget(self.chk_deg)
-        unit_layout.addWidget(self.chk_rad)
+        # Exclusive check box group
+        CheckBoxGroup(self.chk_deg, self.chk_rad, parent_widget=self)
 
 
-        top_layout.addLayout(coor_sys_layout)
-        top_layout.addLayout(unit_layout)
+    def lay_layout(self):
+        # Pose system Selector Checkbox
+        coor_sys_layout = initLayout("Coordinate System: ",
+                                      self.check_ros,
+                                      self.check_unity)
 
-        # self.chk_ros.stateChanged.connect(self.update_odom_display)
-        # self.chk_unity.stateChanged.connect(self.update_odom_display)
+        # Unit Selector Checkbox
+        unit_layout = initLayout("Angle unit: ",
+                                  self.chk_deg,
+                                  self.chk_rad)
 
-        # Labels for Position and Yaw Display
-        self.lbl_ros_coords = QLabel("ROS (x, y, z | yaw): N/A")
-        self.lbl_unity_coords = QLabel("Unity (x, y, z | yaw): N/A")
-
-        top_layout.addWidget(self.lbl_ros_coords)
-        top_layout.addWidget(self.lbl_unity_coords)
-
-
-
-
+        initLayout(coor_sys_layout,
+                    unit_layout,
+                    self.label_ros_coords,
+                    self.label_unity_coords,
+                    layout_class=QVBoxLayout,
+                    parent_widget=self)
 
 
+
+
+
+    # -------------------- ODOM RETRIEVER AND DISPLAY METHODS --------------------
     def odom_callback(self, msg):
         pos = msg.pose.pose.position
         ori = msg.pose.pose.orientation
 
         ros_yaw_rad = yaw_from_quat(x=ori.x, y=ori.y, z=ori.z, w=ori.w)
-
         # Safely send parameters across threads via Qt Signal
         self.signals.odom_received.emit(pos.x, pos.y, pos.z, ros_yaw_rad)
 
 
     def update_odom_display(self, x=None, y=None, z=None, ros_yaw_rad=None):
-        # print(f"x: {x}, y: {y}, z: {z}, yaw: {ros_yaw_rad}")
         if x is None or y is None or z is None or ros_yaw_rad is None:
-            self.lbl_ros_coords.setText("ROS (x, y, z | yaw): N/A")
-            self.lbl_unity_coords.setText("Unity (x, y, z | yaw): N/A")
+            self.label_ros_coords.setText("ROS (x, y, z | yaw): N/A")
+            self.label_unity_coords.setText("Unity (x, y, z | yaw): N/A")
         else:
             if self.chk_deg.isChecked():
                 ros_yaw_rad = math.degrees(ros_yaw_rad)
-            # self.current_ros_pose = (x, y, z, ros_yaw_rad)
-            # rx, ry, rz, ryaw = self.current_ros_pose
-            rx, ry, rz, ryaw = (x, y, z, ros_yaw_rad)
-            self.lbl_ros_coords.setText(
-                    f"ROS (x, y, z, yaw): ({rx:.2f}, {ry:.2f}, {rz:.2f})\n" 
-                    f"\tYaw (Z-Rot): {ryaw:.1f})"
+
+            self.label_ros_coords.setText(
+                    f"ROS (x, y, z, yaw): ({x:.2f}, {y:.2f}, {z:.2f})\n" 
+                    f"\tYaw (Z-Rot): {ros_yaw_rad:.1f})"
                 )
+            
             ux, uy, uz, uyaw = ros_to_unity(x, y, z, ros_yaw_rad)
-            self.lbl_unity_coords.setText(
+            self.label_unity_coords.setText(
                     f"Unity (x, y, z): ({ux:.2f}, {uy:.2f}, {uz:.2f})\n"
                     f"\tYaw (Y-Rot): {uyaw:.1f}"
                 )
 
-        # 1. Display ROS Coordinates and Yaw (Radians + Degrees)
-        if self.chk_ros.isChecked():
-            self.lbl_ros_coords.show()
-        else:
-            self.lbl_ros_coords.hide()
 
-        # 2. Display Unity Coordinates and Yaw (Euler Degrees [0, 360))
-        if self.chk_unity.isChecked():
-            
-            self.lbl_unity_coords.show()
+    # -------------------- CHECKBOX STATE CHANGE CONFIGURATION --------------------
+    def check_ros_state_change(self):
+        if self.check_ros.isChecked():
+            self.label_ros_coords.show()
         else:
-            self.lbl_unity_coords.hide()
+            self.label_ros_coords.hide()
+
+    def check_unity_state_change(self):
+        if self.check_unity.isChecked():
+            self.label_unity_coords.show()
+        else:
+            self.label_unity_coords.hide()
