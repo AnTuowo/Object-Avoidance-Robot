@@ -15,7 +15,7 @@ class RosBridgeSignals(QObject):
     odom_received = pyqtSignal(float, float, float, float)
 
 
-class CoordinatePane(QFrame):
+class PosePane(QFrame):
     def __init__(self):
         super().__init__()
         # self.current_ros_pose = (None, None, None, None) # x, y, z, yaw
