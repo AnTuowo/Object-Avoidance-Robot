@@ -1,7 +1,0 @@
-Process name: /home/nhi/Unity/Hub/Editor/2022.3.62f2/Editor/unityhub-unity-editor-2022.3.62f2
-Process image: /home/nhi/Unity/Hub/Editor/2022.3.62f2/Editor/unityhub-unity-editor-2022.3.62f2
-Process started: 2026.09.28.10.50.01.963
-Error: Reading would overrun buffer
-StackTrace:   at System.IO.FileStream.Read (System.Byte[] array, System.Int32 offset, System.Int32 count) [0x0007a] in <9c9d7808da6a43e3b68409f2b63b3e6f>:0 
-  at Codice.CM.WorkspaceServer.WorkspaceTreeDataStore.ReadWorkspaceContentFromFile (Codice.CM.Common.WorkspaceInfo wkInfo, System.String filePath, Codice.CM.WorkspaceServer.IWorkspaceRevisionInfoCache revisionCache, Codice.Utils.Buffers.FlexibleBufferPool bufferPool) [0x0005e] in <feec3139f4c04de6871f4a301f2c1526>:0 
-  at Codice.CM.WorkspaceServer.WorkspaceTreeDataStore.ReadWorkspaceTreeContent (Codice.CM.Common.WorkspaceInfo wkInfo, System.String wkTreeFile, Codice.CM.WorkspaceServer.IWorkspaceRevisionInfoCache revisionCache, Codice.Utils.Buffers.FlexibleBufferPool bufferPool) [0x00008] in <feec3139f4c04de6871f4a301f2c1526>:0 
