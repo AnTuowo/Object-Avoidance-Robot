@@ -74,3 +74,6 @@ class StatusLabel(QPushButton):
         self.set_state("Done  [x]", "HoneyDew", "SpringGreen")
     def fail_state(self):
         self.set_state("Failed  [x]", "LightPink", "Red")
+
+
+

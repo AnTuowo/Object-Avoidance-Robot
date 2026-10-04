@@ -40,6 +40,7 @@ class Milestone1Controller:
         rospy.loginfo(f"Moving to target: X={self.target_x}, Y={self.target_y}")
 
         while not rospy.is_shutdown():
+            # ---------------- CALCULATE DIST AND ANGLE ERROR ----------------
             dx = self.target_x - self.curr_x
             dy = self.target_y - self.curr_y
             dist = math.hypot(dx, dy)
@@ -52,6 +53,8 @@ class Milestone1Controller:
 
             rospy.loginfo(f"Dist: {dist:.2f} m | Yaw: {math.degrees(self.curr_yaw):.1f}° | Err: {math.degrees(angle_err):.1f}°")
 
+
+            # ---------------- CONTROL BY PUBLISH TO CMD_VEL ----------------
             cmd = Twist()
 
             # Target reached condition (25 cm tolerance to prevent stalling near the goal)
@@ -62,18 +65,22 @@ class Milestone1Controller:
                 rospy.loginfo("Milestone 1 Completed: Target reached!")
                 break
 
+            MIN_ANGULAR_VEL = 0.4
+            ANGLE_THRESHOLD = math.radians(5)
+            ANG_VEL_SIGN = math.copysign(1, angle_err)
             # If facing opposite direction, rotate out of the 180-degree wrap-around trap
             if abs(math.degrees(angle_err)) > 165.0:
                 cmd.linear.x = 0.0
-                cmd.angular.z = 0.5
-            elif abs(angle_err) > 0.4:
+                cmd.angular.z = 0.5 * ANG_VEL_SIGN
+            elif abs(angle_err) > ANGLE_THRESHOLD:
                 # Rotate toward target heading
                 cmd.linear.x = 0.0
-                cmd.angular.z = max(-0.6, min(0.6, 0.8 * angle_err))
+                ang_vel = max(-0.6, min(0.6, 0.8 * angle_err))
+                cmd.angular.z = ang_vel if abs(ang_vel) >= MIN_ANGULAR_VEL else MIN_ANGULAR_VEL * ANG_VEL_SIGN
             else:
-                # Drive forward with sufficient velocity (0.6 - 0.8 m/s) to overcome wheel resistance
-                cmd.linear.x = min(0.8, max(0.5, 0.6 * dist))
-                cmd.angular.z = 0.5 * angle_err
+                cmd.linear.x = 0.8 if dist > 0.8 else min(0.8, max(0.3, 0.6 * dist))
+                ang_vel = 0.6 * angle_err
+                cmd.angular.z = ang_vel if abs(ang_vel) >= MIN_ANGULAR_VEL else MIN_ANGULAR_VEL * ANG_VEL_SIGN
 
             self.cmd_pub.publish(cmd)
             rate.sleep()

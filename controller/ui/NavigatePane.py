@@ -3,7 +3,7 @@ from pathlib import Path
 from PyQt5.QtWidgets import (
     QVBoxLayout, QHBoxLayout, 
     QLabel, QLineEdit, QPushButton, QCheckBox,
-    QGroupBox, QButtonGroup, QFrame
+    QGroupBox, QButtonGroup, QFrame, QAction
 )
 from PyQt5.QtCore import QProcess
 from PyQt5.QtGui import QDoubleValidator
@@ -15,8 +15,9 @@ from .CustomUI import *
 
 
 class NavigationPane(QFrame):
-    def __init__(self, control_script_path: Path):
+    def __init__(self, connection_state: QAction, control_script_path: Path):
         super().__init__()
+        self.connection_state = connection_state
         self.control_script_path = str(control_script_path)
 
         self.init_fields()
@@ -86,13 +87,14 @@ class NavigationPane(QFrame):
 
     # -------------------- INTERNAL HELPER METHODS --------------------
     def validate_inputs(self):
-        txt_x = self.input_x.text().strip()
-        txt_y = self.input_y_z.text().strip()
+        if self.connection_state.isChecked():
+            txt_x = self.input_x.text().strip()
+            txt_y = self.input_y_z.text().strip()
 
-        if not txt_x or not txt_y:
-            self.btn_start.setEnabled(False)
-            return
-        self.btn_start.setEnabled(True)
+            if not txt_x or not txt_y:
+                self.btn_start.setEnabled(False)
+                return
+            self.btn_start.setEnabled(True)
 
 
     def on_start_clicked(self):
