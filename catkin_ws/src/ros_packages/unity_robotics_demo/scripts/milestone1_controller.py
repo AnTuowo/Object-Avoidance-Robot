@@ -78,7 +78,7 @@ class Milestone1Controller:
 
 if __name__ == '__main__':
     try:
-        controller = Milestone1Controller(target_x=2.0, target_y=1.5)
+        controller = Milestone1Controller(target_x=-2.0, target_y=1.5)
         controller.run()
     except rospy.ROSInterruptException:
         pass
