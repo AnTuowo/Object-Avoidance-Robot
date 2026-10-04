@@ -1,11 +1,12 @@
 from PyQt5.QtWidgets import (
     QLayout, QWidget, QVBoxLayout, QHBoxLayout, 
     QLabel, QLineEdit, QPushButton, QCheckBox,
-    QGroupBox, QButtonGroup, QFrame
+    QGroupBox, QButtonGroup, QFrame, QMessageBox
 )
 from PyQt5.QtCore import QProcess
 from PyQt5.QtGui import QDoubleValidator
 from typing import Type, Union
+import subprocess
 
 
 
@@ -77,3 +78,28 @@ class StatusLabel(QPushButton):
 
 
 
+def ros_launch_msg_box(program_name: str,
+                       ros_setup_path: str,
+                       argument: str) -> subprocess.Popen:
+    reply = QMessageBox.question(
+        None,
+        f"Start {program_name}",
+        f"Do you want to start the {program_name}?",
+        QMessageBox.Yes | QMessageBox.No,
+        QMessageBox.Yes
+    )
+
+    if reply == QMessageBox.Yes:
+        command = f"""
+                source {str(ros_setup_path)}
+                {argument}
+            """
+
+        return subprocess.Popen([
+            "gnome-terminal",
+            "--disable-factory",  # Keeps process attached to Python
+            "--",
+            "bash",
+            "-c",
+            command
+        ])

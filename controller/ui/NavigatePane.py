@@ -1,9 +1,9 @@
 from pathlib import Path
 
 from PyQt5.QtWidgets import (
-    QVBoxLayout, QHBoxLayout, 
-    QLabel, QLineEdit, QPushButton, QCheckBox,
-    QGroupBox, QButtonGroup, QFrame, QAction
+    QVBoxLayout, QLabel, QLineEdit, 
+    QPushButton, QCheckBox,
+    QGroupBox, QFrame
 )
 from PyQt5.QtCore import QProcess
 from PyQt5.QtGui import QDoubleValidator
@@ -15,9 +15,8 @@ from .CustomUI import *
 
 
 class NavigationPane(QFrame):
-    def __init__(self, connection_state: QAction, control_script_path: Path):
+    def __init__(self, control_script_path: Path):
         super().__init__()
-        self.connection_state = connection_state
         self.control_script_path = str(control_script_path)
 
         self.init_fields()
@@ -36,6 +35,10 @@ class NavigationPane(QFrame):
         self.btn_start = QPushButton("Start")
         self.btn_cancel = QPushButton("Cancel")
         self.status_icon = StatusLabel()
+
+        self.dist_angle_err_label = QLabel()
+        self.robot_connected = False
+        self.target_pose = (None, None)
 
     def configure_fields(self):
         self.process.finished.connect(self.on_process_finish)
@@ -78,6 +81,7 @@ class NavigationPane(QFrame):
                    parent_widget=input_group)
         
         initLayout(unit_layout,
+                   self.dist_angle_err_label,
                    input_group,
                    layout_class=QVBoxLayout,
                    parent_widget=self)
@@ -87,7 +91,7 @@ class NavigationPane(QFrame):
 
     # -------------------- INTERNAL HELPER METHODS --------------------
     def validate_inputs(self):
-        if self.connection_state.isChecked():
+        if self.robot_connected:
             txt_x = self.input_x.text().strip()
             txt_y = self.input_y_z.text().strip()
 
@@ -105,11 +109,11 @@ class NavigationPane(QFrame):
             if self.chk_unity.isChecked():
                 val_x, val_y_z, _, _ = unity_to_ros(val_x, None, val_y_z, None)
 
+            self.target_pose = (val_x, val_y_z)
+
             self.on_process_start()
             print(f"Executing script with target ROS parameters -> X: {val_x}, Y: {val_y_z}")
             self.process.start("python3", [self.control_script_path, str(val_x), str(val_y_z)])
-
-            self.btn_cancel.show()
 
         elif self.btn_start.text() == "Pause":
             pause_process(self.process)
@@ -128,13 +132,35 @@ class NavigationPane(QFrame):
     def on_process_start(self):
         self.status_icon.running_state()
         self.btn_start.setText("Pause")
+        self.btn_cancel.show()
+        self.dist_angle_err_label.show()
 
     def on_process_finish(self):
-        self.status_icon.success_state()
+        if self.robot_connected:
+            self.status_icon.success_state()
+        else:
+            self.status_icon.fail_state()
         self.btn_start.setText("Start")
         self.btn_cancel.hide()
-        
+        self.dist_angle_err_label.hide()
+        self.target_pose = (None, None)
 
+
+        
+    def state_toggle(self):
+        self.robot_connected = not self.robot_connected
+        self.btn_start.setEnabled(self.robot_connected)
+        if self.robot_connected == False:
+            self.btn_start.setText("Start")
+            cancel_process(self.process)
+
+    def update_dist_err(self, x, y, yaw):
+        val_x, val_y = self.target_pose  # Ros sys
+        if val_x is not None and val_y is not None:
+            dist, err = get_dist_angle_err(val_x, val_y, x, y, yaw)
+            self.dist_angle_err_label.setText(
+                f"Dist: {dist:.2f} m  |  Angle Error: {math.degrees(err):.1f}°"
+                )
 
 
 

@@ -1,19 +1,22 @@
 #!/usr/bin/env python3
+import os
 import sys
+import time
 from pathlib import Path
 import signal
-import subprocess
 
 import rospy
 from nav_msgs.msg import Odometry
 
 from .PosePane import PosePane
 from .NavigatePane import NavigationPane
+from .LauncherPane import LauncherPane
 from .CoordinateConversion import *
+from .CustomUI import ros_launch_msg_box
 
 from PyQt5.QtWidgets import (
     QApplication, QWidget, QVBoxLayout, 
-    QMessageBox, QFrame, QAction
+    QFrame, QPushButton
 )
 from PyQt5.QtCore import pyqtSignal, QObject,  QTimer
 
@@ -34,39 +37,54 @@ class RosBridgeSignals(QObject):
 
 
 class RobotControllerUI(QWidget):
+    ODOM_TIMEOUT_MS = 500  # 500 ms
+
     def __init__(self):
         super().__init__()
         self.signals = RosBridgeSignals()
         self.process = None
+        self.robot_connected = False
+
+        # Timer used to detect loss of /odom messages
+        self.odom_timeout_timer = QTimer(self)
+        self.odom_timeout_timer.setSingleShot(True)
+        self.odom_timeout_timer.timeout.connect(self.odom_timeout)
 
         self.init_ros()
         self.init_ui()
-        self.signals.odom_received.connect(self.pose_frame.update_odom_display)
+        self.signals.odom_received.connect(self.on_odom_arrive)
 
+
+    # ------------------ UI SECTION ------------------
     def init_ui(self):
         self.setWindowTitle("Robot Controller")
         self.resize(450, 600)
 
-        self.connection_state = QAction(checkable=True)
-        self.connection_state.setChecked(False)
-        print(f"Check state: {self.connection_state.isChecked()}")
-        self.connection_state.toggled.connect(self.on_connect_state_change)
-
         main_layout = QVBoxLayout(self)
 
-        self.pose_frame = PosePane(connection_state=self.connection_state)
+        self.launcher_frame = QFrame()
+        self.launch_endpoint = QPushButton("Launch_endpoint")
+
+        self.launcher_frame = LauncherPane(ROS_SETUP_PATH)
+        self.launcher_frame.setFrameShape(QFrame.Box)
+        self.launcher_frame.setFrameShadow(QFrame.Raised)
+        self.launcher_frame.setLineWidth(2)
+        main_layout.addWidget(self.launcher_frame)
+
+        self.pose_frame = PosePane()
         self.pose_frame.setFrameShape(QFrame.Box)
         self.pose_frame.setFrameShadow(QFrame.Raised)
         self.pose_frame.setLineWidth(2)
         main_layout.addWidget(self.pose_frame)
 
-        self.navigate_frame = NavigationPane(connection_state=self.connection_state,
-                                             control_script_path=CONTROL_ROBOT_PATH)
+        self.navigate_frame = NavigationPane(control_script_path=CONTROL_ROBOT_PATH)
         self.navigate_frame.setFrameShape(QFrame.Box)
         self.navigate_frame.setFrameShadow(QFrame.Raised)
         self.navigate_frame.setLineWidth(2)
         main_layout.addWidget(self.navigate_frame)
 
+
+    # ------------------ ROS SECTION ------------------
     def init_ros(self):
         rospy.init_node("robot_controller_gui", anonymous=True, disable_signals=True)
         rospy.Subscriber("/odom", Odometry, self.odom_callback)
@@ -79,39 +97,20 @@ class RobotControllerUI(QWidget):
         # Safely send parameters across threads via Qt Signal
         self.signals.odom_received.emit(pos.x, pos.y, pos.z, ros_yaw_rad)
 
+    def on_odom_arrive(self, x, y, z, ros_yaw_rad):
+        self.pose_frame.update_odom_display(x, y, z, ros_yaw_rad)
+        self.navigate_frame.update_dist_err(x, y, ros_yaw_rad)
+        if self.navigate_frame.robot_connected is not True:
+            self.navigate_frame.state_toggle()
 
-    def on_connect_state_change(self):
-        self.navigate_frame.btn_start.setEnabled(self.connection_state.isChecked())
+        self.odom_timeout_timer.start(self.ODOM_TIMEOUT_MS)
 
-
-
-def launch_ros_endpoint():
-    reply = QMessageBox.question(
-        None,
-        "Start ROS TCP Endpoint",
-        "Do you want to start the ROS TCP endpoint?",
-        QMessageBox.Yes | QMessageBox.No,
-        QMessageBox.No
-    )
-
-    if reply == QMessageBox.Yes:
-        command = f"""
-                source {str(ROS_SETUP_PATH)}
-                roslaunch ros_tcp_endpoint endpoint.launch
-            """
-
-        subprocess.Popen([
-            "gnome-terminal",
-            "--",
-            "bash",
-            "-c",
-            command
-        ])
+    def odom_timeout(self):
+        self.pose_frame.update_odom_display()
+        self.navigate_frame.state_toggle()
 
 
         
-
-
 
 
 if __name__ == "__main__":
@@ -125,7 +124,17 @@ if __name__ == "__main__":
     timer.start(500)  # Fires every 500ms
     timer.timeout.connect(lambda: None)  # Dummy callback keeps Python responsive to signal
 
-    launch_ros_endpoint()
+    p = ros_launch_msg_box("ROS TCP Endpoint", ROS_SETUP_PATH, 
+                       "roslaunch ros_tcp_endpoint endpoint.launch")
+    time.sleep(1.2)
+    def cleanup():
+        # Ensure process exists and has a valid PID before signaling
+            if 'p' in globals() and p is not None and p.poll() is None:
+                try:
+                    os.killpg(os.getpgid(p.pid), signal.SIGINT)
+                except (ProcessLookupError, OSError):
+                    pass
+    app.aboutToQuit.connect(cleanup)
 
     window = RobotControllerUI()
     window.show()

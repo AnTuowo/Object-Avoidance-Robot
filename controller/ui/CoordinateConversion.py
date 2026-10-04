@@ -30,11 +30,14 @@ def get_distance(target_x: float, target_y: float, curr_x: float, curr_y: float)
     dy = target_y - curr_y
     return math.hypot(dx, dy)
 
-def get_angle_err(target_x: float, target_y: float, curr_x: float, curr_y: float, curr_yaw: float):
+def get_dist_angle_err(target_x: float, target_y: float, curr_x: float, curr_y: float, curr_yaw: float):
     dx = target_x - curr_x
     dy = target_y - curr_y
-    target_angle = math.atan2(dy, dx)
+    dist = math.hypot(dx, dy)
 
+    target_angle = math.atan2(dy, dx)
     angle_err = target_angle - curr_yaw
     # Normalize angle to range [-pi, pi]
-    return math.atan2(math.sin(angle_err), math.cos(angle_err)) # Unit: rad
+    normalized_ang_err = math.atan2(math.sin(angle_err), math.cos(angle_err)) # Unit: rad
+
+    return dist, angle_err
