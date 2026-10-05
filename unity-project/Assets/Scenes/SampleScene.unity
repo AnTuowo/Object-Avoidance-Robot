@@ -633,6 +633,7 @@ GameObject:
   - component: {fileID: 197223018}
   - component: {fileID: 197223021}
   - component: {fileID: 197223020}
+  - component: {fileID: 197223022}
   m_Layer: 0
   m_Name: differential_wheeled_robot
   m_TagString: robot
@@ -707,6 +708,23 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4e17ceeb1659d8918ac94d6571fa6957, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+--- !u!114 &197223022
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 197223016}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5481d2e35027ce6afa707a93d8178a38, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  topicName: /odom
+  frameId: odom
+  childFrameId: base_footprint
+  publishMessageFrequency: 0.05
+  robotTransform: {fileID: 0}
 --- !u!1 &205589992
 GameObject:
   m_ObjectHideFlags: 0
@@ -3199,6 +3217,7 @@ GameObject:
   - component: {fileID: 1621833234}
   - component: {fileID: 1621833233}
   - component: {fileID: 1621833244}
+  - component: {fileID: 1621833245}
   m_Layer: 0
   m_Name: Plugins
   m_TagString: Untagged
@@ -3407,6 +3426,27 @@ MonoBehaviour:
   m_Topic: 
   m_ID: 
   m_Settings: {fileID: 11400000, guid: f53165fb8c4d340e3ad973ec7784242e, type: 2}
+--- !u!114 &1621833245
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1621833231}
+  m_Enabled: 0
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: aa5e309a73db1427387873581691511a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_Topic: 
+  m_ID: 1621833245-0
+  thickness: 0.01
+  lengthScale: 1
+  sphereRadius: 1
+  m_Color: {r: 0, g: 0, b: 0, a: 0}
+  m_TFTrackingSettings:
+    type: 1
+    tfTopic: /tf
 --- !u!1 &1648341350
 GameObject:
   m_ObjectHideFlags: 0
