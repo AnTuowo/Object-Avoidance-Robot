@@ -322,27 +322,20 @@ class MultipleTargetTab(QWidget):
 
 class TargetTabs(QTabWidget):
     def __init__(self, 
-                 tab_single_on_valid: function = None, 
-                 tab_single_on_invalid: function = None, 
-                 tab_single_on_valid: function = None, ):
+                 tab_on_valid: function = None, 
+                 tab_on_invalid: function = None):
         super().__init__()
 
         self.setMovable(True)
 
-        self.single_target_tab = SingleTargetTab()
-        self.multi_target_tab = MultipleTargetTab()
+        self.single_target_tab = SingleTargetTab(tab_on_valid, tab_on_invalid)
+        self.multi_target_tab = MultipleTargetTab(tab_on_valid, tab_on_invalid)
 
         self.addTab(self.single_target_tab, "Single Target")
         self.addTab(self.multi_target_tab, "Multiple Target")
 
         # Connect tab switching signal
         self.currentChanged.connect(self.on_tab_changed)
-
-
-
-    def set_interaction_disabled(self, disable: bool):
-        """Method to disable/enable interaction and tab switching."""
-        self.setEnabled(not disable)
 
     def print_current_inputs(self):
         """Prints input tuples from currently selected tab."""
@@ -354,14 +347,17 @@ class TargetTabs(QTabWidget):
     def get_current_tab_input_list(self):
         """Returns input tuples from currently selected tab."""
         current_widget = self.currentWidget()
-        if hasattr(current_widget, "update_on_input_valid_state"):
-            return current_widget.update_on_input_valid_state()
+        if hasattr(current_widget, "get_inputs"):
+            return current_widget.get_inputs()
 
     def on_tab_changed(self):
         """Change state base on input validity every time switching tab."""
         current_widget = self.currentWidget()
-        if hasattr(current_widget, "get_inputs"):
-            return current_widget.get_inputs()
+        if hasattr(current_widget, "update_on_input_valid_state"):
+            current_widget.update_on_input_valid_state()
+
+    def is_multi_target_tab_active(self):
+        return self.currentWidget() == self.multi_target_tab  # The "Multiple Target" tab
 
 
 

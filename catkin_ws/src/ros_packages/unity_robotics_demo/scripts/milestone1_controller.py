@@ -57,8 +57,9 @@ class Milestone1Controller:
             # ---------------- CONTROL BY PUBLISH TO CMD_VEL ----------------
             cmd = Twist()
 
-            # Target reached condition (25 cm tolerance to prevent stalling near the goal)
-            if dist < 0.25:
+
+            # Target reached condition (10 cm tolerance to prevent stalling near the goal)
+            if dist < 0.1:
                 cmd.linear.x = 0.0
                 cmd.angular.z = 0.0
                 self.cmd_pub.publish(cmd)

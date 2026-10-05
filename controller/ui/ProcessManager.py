@@ -59,9 +59,9 @@ class ProcessManager:
             resume_process(self.running_process)
 
     def cancel_process(self):
+        self.command_list.clear()
         cancel_process(self.running_process)
         self.after_all_done()
-        self.command_list.clear()
 
 def build_command_dict(program: str, *args: str):
     arguments = []
