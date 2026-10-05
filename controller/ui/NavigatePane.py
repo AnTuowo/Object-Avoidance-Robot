@@ -184,6 +184,7 @@ class NavigationPane(QFrame):
         
     def state_toggle(self):
         self.robot_connected = not self.robot_connected
+        
         self.btn_start.setEnabled(self.robot_connected)
         if self.robot_connected == False:
             self.btn_start.setText("Start")

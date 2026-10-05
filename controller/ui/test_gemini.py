@@ -1,4 +1,3 @@
-from __future__ import annotations
 import sys
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QTabWidget, QWidget, QVBoxLayout, 
@@ -8,86 +7,73 @@ from PyQt5.QtWidgets import (
 from PyQt5.QtCore import Qt, QMimeData
 from PyQt5.QtGui import QDrag, QPixmap, QColor
 
-from .CustomUI import *
+import time
 
 
-ITEM_STRETCH_FACTOR = (1, 1, 0, 0)
-
+# ----------------------------------------------------------------------
+# TAB 1: Static Tab (Single Input: X and Y)
+# ----------------------------------------------------------------------
 class SingleTargetTab(QWidget):
-    def __init__(self, 
-                 on_valid_input: function = None, 
-                 on_invalid_input: function = None,
-                 parent=None):
+    def __init__(self, parent=None):
         super().__init__(parent)
-        self.on_valid = on_valid_input
-        self.on_invalid = on_invalid_input
+        layout = QFormLayout(self)
         
-        validator = QDoubleValidator()
-        validator.setNotation(QDoubleValidator.StandardNotation)
-
-        self.input_x = QLineEdit()
-        self.input_x.setPlaceholderText("Enter float...")
-        self.input_x.setValidator(validator)
-        self.input_x.textChanged.connect(self.validate_inputs)
-
-        self.input_y_z = QLineEdit()
-        self.input_y_z.setPlaceholderText("Enter float...")
-        self.input_y_z.setValidator(validator)
-        self.input_y_z.textChanged.connect(self.validate_inputs)
-
-        layout_x = initLayout("X: ", self.input_x, stretch_factor=(3, 7))
-        layout_y_z = initLayout("Y(Ros) / Z(Unity): ", self.input_y_z, stretch_factor=(3, 7))
-        initLayout(layout_x, layout_y_z, layout_class=QVBoxLayout, parent_widget=self)
-
-
+        self.x_input = QLineEdit()
+        self.y_input = QLineEdit()
+        
+        layout.addRow("X:", self.x_input)
+        layout.addRow("Y:", self.y_input)
 
     def get_inputs(self):
         """Returns a list with a single tuple [(x, y)] if valid, or empty list."""
-        x = float(self.input_x.text().strip())
-        y = float(self.input_y_z.text().strip())
-        return [(x, y)]
-
-    def update_on_input_valid_state(self):
-        """Call on switch tab"""
-        self.validate_inputs()
-
-    def validate_inputs(self):
-        txt_x = self.input_x.text().strip()
-        txt_y = self.input_y_z.text().strip()
-
-        if not txt_x or not txt_y:
-            if self.on_invalid: 
-                self.on_invalid()
-            return
-        if self.on_valid:
-            self.on_valid()
+        x = self.x_input.text().strip()
+        y = self.y_input.text().strip()
+        if x or y:
+            return [(x, y)]
+        return []
 
 
+# ----------------------------------------------------------------------
+# TAB 2 COMPONENTS: Draggable Item Widget & Add Target Dialog
+# ----------------------------------------------------------------------
 class DraggableItemWidget(QFrame):
     """Widget representing a single input row inside the scroll area."""
     def __init__(self, x, y, parent_container):
-        super().__init__(parent_container)
+        super().__init__()
         self.x_val = x
         self.y_val = y
         self.parent_container = parent_container
+        
+        self.setFrameShape(QFrame.StyledPanel)
+        self.setStyleSheet("""
+            DraggableItemWidget {
+                background-color: #ffffff;
+                border: 1px solid #cccccc;
+                border-radius: 4px;
+                padding: 4px;
+            }
+        """)
 
-        self.lbl_x = QLabel(str(x))
-        self.lbl_y = QLabel(str(y))
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(10, 5, 10, 5)
 
         # Drag handle / Visual indicator
         self.handle = QLabel("☰")
         self.handle.setCursor(Qt.OpenHandCursor)
+
+        self.lbl_x = QLabel(str(self.x_val))
+        self.lbl_y = QLabel(str(self.y_val))
+
         # Remove button
         self.btn_remove = QPushButton("☒")
         self.btn_remove.setFixedWidth(30)
         self.btn_remove.setFlat(True)
         self.btn_remove.clicked.connect(self.remove_self)
 
-        layout = initLayout(self.lbl_x, self.lbl_y, self.btn_remove, self.handle,  
-                            stretch_factor=ITEM_STRETCH_FACTOR, parent_widget=self)
-        layout.setContentsMargins(10, 5, 10, 5)
-        self.setStyleSheet("background-color: #ffffff;")
-
+        layout.addWidget(self.handle)
+        layout.addWidget(self.lbl_x, stretch=1)
+        layout.addWidget(self.lbl_y, stretch=1)
+        layout.addWidget(self.btn_remove)
 
     def remove_self(self):
         self.parent_container.remove_item(self)
@@ -117,7 +103,7 @@ class DraggableItemWidget(QFrame):
         self.show()
 
     def mouseDoubleClickEvent(self, event):
-        dialog = AddTargetDialog(self, "Modify Target")
+        dialog = AddTargetDialog("Modify Target", self)
         if dialog.exec_() == QDialog.Accepted:
             x, y = dialog.get_values()
             self.x_val = x
@@ -129,75 +115,56 @@ class DraggableItemWidget(QFrame):
 
 class AddTargetDialog(QDialog):
     """Blocking modal dialog to retrieve X and Y inputs."""
-    def __init__(self, parent=None, title: str = "Add target"):
+    def __init__(self, title = "Add Target", parent=None):
         super().__init__(parent)
         self.setWindowTitle(title)
         self.setModal(True) # Makes it blocking
         self.setFixedSize(400, 200)
 
-        validator = QDoubleValidator()
-        validator.setNotation(QDoubleValidator.StandardNotation)
+        layout = QFormLayout(self)
 
-        self.input_x = QLineEdit()
-        self.input_x.setPlaceholderText("Enter float...")
-        self.input_x.setValidator(validator)
-        self.input_x.textChanged.connect(self.validate_inputs)
-
-        self.input_y_z = QLineEdit()
-        self.input_y_z.setPlaceholderText("Enter float...")
-        self.input_y_z.setValidator(validator)
-        self.input_y_z.textChanged.connect(self.validate_inputs)
-
-        layout_x = initLayout("X: ", self.input_x, stretch_factor=(3, 7))
-        layout_y_z = initLayout("Y(Ros) / Z(Unity): ", self.input_y_z, stretch_factor=(3, 7))
+        self.x_input = QLineEdit()
+        self.y_input = QLineEdit()
+        layout.addRow("X:", self.x_input)
+        layout.addRow("Y:", self.y_input)
 
         self.btn_add = QPushButton("Add")
         self.btn_add.clicked.connect(self.accept)
-        self.btn_add.setEnabled(False)
-
-        initLayout(layout_x,
-                   layout_y_z,
-                   self.btn_add,
-                   layout_class=QVBoxLayout,
-                   parent_widget=self)
+        layout.addRow(self.btn_add)
 
     def get_values(self):
-        return self.input_x.text().strip(), self.input_y_z.text().strip()
-
-    def validate_inputs(self):
-        txt_x = self.input_x.text().strip()
-        txt_y = self.input_y_z.text().strip()
-
-        if not txt_x or not txt_y:
-            self.btn_add.setEnabled(False)
-            return
-        self.btn_add.setEnabled(True)
+        return self.x_input.text().strip(), self.y_input_y_z.text().strip()
 
 
+# ----------------------------------------------------------------------
+# TAB 2: Dynamic Scroll Pane with Drag/Drop Reordering
+# ----------------------------------------------------------------------
 class MultipleTargetTab(QWidget):
-    def __init__(self, 
-                 on_valid_input: function = None, 
-                 on_invalid_input: function = None,
-                 parent=None):
+    def __init__(self, parent=None):
         super().__init__(parent)
-        self.on_valid = on_valid_input
-        self.on_invalid = on_invalid_input
         self.items = []
 
-        self.setStyleSheet("""
-            MultipleTargetTab {
-                background-color: snow;
-                border: 5px solid slategrey;
-                border-radius: 10px;
-            }
-        """)
+        main_layout = QVBoxLayout(self)
+        main_layout.setContentsMargins(5, 5, 5, 5)
 
         # 1. Header Bar (Column Headers)
         header_frame = QFrame()
         header_frame.setStyleSheet("background-color: #e0e0e0; font-weight: bold;")
-        header_layout = initLayout("X Value", "Y Value", "\t", "\t", 
-                                   parent_widget=header_frame, stretch_factor=(1,1,0,0))
+        header_layout = QHBoxLayout(header_frame)
+        header_layout.setContentsMargins(10, 5, 10, 5)
+        
+        lbl_drag = QLabel("")
+        lbl_drag.setFixedWidth(20)
+        lbl_x = QLabel("X Value")
+        lbl_y = QLabel("Y Value")
+        lbl_action = QLabel("Action")
+        lbl_action.setFixedWidth(30)
 
+        header_layout.addWidget(lbl_drag)
+        header_layout.addWidget(lbl_x, stretch=1)
+        header_layout.addWidget(lbl_y, stretch=1)
+        header_layout.addWidget(lbl_action)
+        main_layout.addWidget(header_frame)
 
         # 2. Scroll Pane (Vertical only)
         self.scroll_area = QScrollArea()
@@ -208,7 +175,8 @@ class MultipleTargetTab(QWidget):
         # Container inside Scroll Area
         self.container_widget = QWidget()
         self.container_layout = QVBoxLayout(self.container_widget)
-        self.container_layout.setAlignment(Qt.AlignTop)  # <--- Keeps items pushed to the top
+        self.container_layout.setAlignment(Qt.AlignTop)
+        self.container_layout.setSpacing(5)
         
         # Enable Drag & Drop target behavior on container layout
         self.container_widget.setAcceptDrops(True)
@@ -217,33 +185,28 @@ class MultipleTargetTab(QWidget):
         self.container_widget.dropEvent = self.dropEvent
 
         self.scroll_area.setWidget(self.container_widget)
-        
+        main_layout.addWidget(self.scroll_area)
 
         # 3. Add Target Button
         self.btn_add_target = QPushButton("Add Target")
         self.btn_add_target.clicked.connect(self.open_add_dialog)
-
-        main_layout = initLayout(header_frame, self.scroll_area, self.btn_add_target, 
-                                 layout_class=QVBoxLayout, parent_widget=self)
-        main_layout.setContentsMargins(5, 5, 5, 5)
-        
+        main_layout.addWidget(self.btn_add_target)
 
     def open_add_dialog(self):
         dialog = AddTargetDialog(self)
         if dialog.exec_() == QDialog.Accepted:
             x, y = dialog.get_values()
-            self.add_item(x, y)
+            if x or y:
+                self.add_item(x, y)
 
     def add_item(self, x, y):
         item = DraggableItemWidget(x, y, self)
         self.items.append(item)
-        self.update_on_input_valid_state()
         self.container_layout.addWidget(item)
 
     def remove_item(self, item_widget):
         if item_widget in self.items:
             self.items.remove(item_widget)
-            self.update_on_input_valid_state()
             self.container_layout.removeWidget(item_widget)
             item_widget.deleteLater()
 
@@ -289,16 +252,19 @@ class MultipleTargetTab(QWidget):
             # Ensure scrolling completes to center the item
             total_height = self.scroll_area.height()
             item_height = total_height / len(self.items)
+
             target_position = (
                 round(total_height - item_height * (index + 0.5))
             )
+
             self.scroll_area.ensureWidgetVisible(item, 0, target_position)
+
 
             # Highlight effect (Flash yellow)
             item.setStyleSheet("""
                 DraggableItemWidget {
                     background-color: #fff9c4;
-                    border: 8px solid #fbc02d;
+                    border: 2px solid #fbc02d;
                     border-radius: 4px;
                 }
             """)
@@ -311,81 +277,96 @@ class MultipleTargetTab(QWidget):
 
     def get_inputs(self):
         """Returns list of tuples [(x1, y1), (x2, y2), ...] matching active order."""
-        return [(float(item.x_val), float(item.y_val)) for item in self.items]
-
-    def update_on_input_valid_state(self):
-        if len(self.items) == 0:
-            if self.on_invalid: self.on_invalid()
-        else:
-            if self.on_valid: self.on_valid()
+        return [(item.x_val, item.y_val) for item in self.items]
 
 
-class TargetTabs(QTabWidget):
-    def __init__(self, 
-                 tab_on_valid: function = None, 
-                 tab_on_invalid: function = None):
+# ----------------------------------------------------------------------
+# MAIN APPLICATION WINDOW
+# ----------------------------------------------------------------------
+class MainWindow(QMainWindow):
+    def __init__(self):
         super().__init__()
+        self.setWindowTitle("Browser-style Input Manager")
+        self.resize(500, 500)
 
-        self.setMovable(True)
+        # Central Setup
+        central_widget = QWidget()
+        self.setCentralWidget(central_widget)
+        main_layout = QVBoxLayout(central_widget)    #################
 
-        self.single_target_tab = SingleTargetTab(tab_on_valid, tab_on_invalid)
-        self.multi_target_tab = MultipleTargetTab(tab_on_valid, tab_on_invalid)
+        # Tab Widget (Web-browser style setup)
+        self.tabs = QTabWidget()
+        self.tabs.setMovable(True)
 
-        self.addTab(self.single_target_tab, "Single Target")
-        self.addTab(self.multi_target_tab, "Multiple Target")
+        self.tab2 = SingleTargetTab()
+        self.tab1 = MultipleTargetTab()
 
-        # Connect tab switching signal
-        self.currentChanged.connect(self.on_tab_changed)
+        self.tabs.addTab(self.tab1, "Static Input")
+        self.tabs.addTab(self.tab2, "Target List")
+
+        main_layout.addWidget(self.tabs)             ###############
+
+        # Demonstration / Control Panel at bottom
+        demo_panel = QHBoxLayout()
+        
+        self.btn_toggle_lock = QPushButton("Disable Interaction & Switch Tab")
+        self.btn_toggle_lock.setCheckable(True)
+        self.btn_toggle_lock.clicked.connect(self.toggle_disable_and_switch)
+        
+        btn_print = QPushButton("Get Inputs (Active Tab)")
+        btn_print.clicked.connect(self.print_current_inputs)
+
+        demo_panel.addWidget(self.btn_toggle_lock)
+        demo_panel.addWidget(btn_print)
+        main_layout.addLayout(demo_panel)             #################
+
+    # ------------------------------------------------------------------
+    # Required Methods
+    # ------------------------------------------------------------------
+
+    def set_interaction_disabled_and_switch(self, disable: bool, target_tab_index: int):
+        """Method to disable/enable interaction and switch active tab."""
+        # Switch tab
+        if 0 <= target_tab_index < self.tabs.count():
+            self.tabs.setCurrentIndex(target_tab_index)
+
+        # Disable / Enable input interaction across tabs
+        self.tabs.setEnabled(not disable)
 
     def print_current_inputs(self):
         """Prints input tuples from currently selected tab."""
-        current_widget = self.currentWidget()
+        current_widget = self.tabs.currentWidget()
         if hasattr(current_widget, "get_inputs"):
             inputs = current_widget.get_inputs()
-            print(f"Inputs from Tab {self.currentIndex() + 1}: {inputs}")
+            print(f"Inputs from Tab {self.tabs.currentIndex() + 1}: {inputs}")
 
-    def get_current_tab_input_list(self):
-        """Returns input tuples from currently selected tab."""
-        current_widget = self.currentWidget()
-        if hasattr(current_widget, "get_inputs"):
-            return current_widget.get_inputs()
-
-    def on_tab_changed(self):
-        """Change state base on input validity every time switching tab."""
-        current_widget = self.currentWidget()
-        if hasattr(current_widget, "update_on_input_valid_state"):
-            current_widget.update_on_input_valid_state()
-
-    def is_multi_target_tab_active(self):
-        return self.currentWidget() == self.multi_target_tab  # The "Multiple Target" tab
-
+    # Helper function for demo button
+    def toggle_disable_and_switch(self, checked):
+        if checked:
+            # Switch to Tab 0 and disable all interactions
+            self.set_interaction_disabled_and_switch(disable=True, target_tab_index=0)
+            self.btn_toggle_lock.setText("Enable Interaction")
+        else:
+            self.set_interaction_disabled_and_switch(disable=False, target_tab_index=1)
+            self.btn_toggle_lock.setText("Disable Interaction & Switch Tab")
 
 
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    main_window = QWidget()
-
-    tabs = TargetTabs()
-    
-    btn_print = QPushButton("Get Inputs (Active Tab)")
-    btn_print.clicked.connect(tabs.print_current_inputs)
-
-    initLayout(tabs,
-               btn_print,
-               layout_class=QVBoxLayout,
-               parent_widget=main_window)
-
-
-
+    window = MainWindow()
     
     # Pre-populating some items in Tab 2 for quick demonstration
-    tabs.multi_target_tab.add_item("100", "200")
-    tabs.multi_target_tab.add_item("300", "400")
-    tabs.multi_target_tab.add_item("500", "600")
+    window.tab1.add_item("100", "200")
+    window.tab1.add_item("300", "400")
+    window.tab1.add_item("500", "600")
+    window.tab1.add_item("100", "200")
+    window.tab1.add_item("300", "400")
+    window.tab1.add_item("500", "600")
 
-    main_window.show()
+    window.show()
+
+    window.tab1.center_and_highlight(5)
+    # window.tab1.unhighlight(2)
+    
     sys.exit(app.exec_())
-
-
-

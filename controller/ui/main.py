@@ -136,6 +136,7 @@ if __name__ == "__main__":
     app.aboutToQuit.connect(cleanup)
 
     window = RobotControllerUI()
+    # window.navigate_frame.tabs.multi_target_tab.add_item(50, 600)
     window.show()
 
     sys.exit(app.exec_())
