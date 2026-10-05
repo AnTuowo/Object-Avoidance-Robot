@@ -117,19 +117,19 @@ class DraggableItemWidget(QFrame):
         self.show()
 
     def mouseDoubleClickEvent(self, event):
-        dialog = AddTargetDialog(self, "Modify Target")
+        dialog = AddTargetDialog(self, "Modify Target", "Modify")
         if dialog.exec_() == QDialog.Accepted:
             x, y = dialog.get_values()
             self.x_val = x
             self.y_val = y
-            self.lbl_x = x
-            self.lbl_y = y
+            self.lbl_x.setText(str(x))
+            self.lbl_y.setText(str(y))
         event.accept()
 
 
 class AddTargetDialog(QDialog):
     """Blocking modal dialog to retrieve X and Y inputs."""
-    def __init__(self, parent=None, title: str = "Add target"):
+    def __init__(self, parent=None, title: str = "Add target", btn_text: str = "Add"):
         super().__init__(parent)
         self.setWindowTitle(title)
         self.setModal(True) # Makes it blocking
@@ -151,7 +151,7 @@ class AddTargetDialog(QDialog):
         layout_x = initLayout("X: ", self.input_x, stretch_factor=(3, 7))
         layout_y_z = initLayout("Y(Ros) / Z(Unity): ", self.input_y_z, stretch_factor=(3, 7))
 
-        self.btn_add = QPushButton("Add")
+        self.btn_add = QPushButton(btn_text)
         self.btn_add.clicked.connect(self.accept)
         self.btn_add.setEnabled(False)
 
@@ -195,7 +195,7 @@ class MultipleTargetTab(QWidget):
         # 1. Header Bar (Column Headers)
         header_frame = QFrame()
         header_frame.setStyleSheet("background-color: #e0e0e0; font-weight: bold;")
-        header_layout = initLayout("X Value", "Y Value", "\t", "\t", 
+        header_layout = initLayout("X Value", "Y Value", "  ", "\t", 
                                    parent_widget=header_frame, stretch_factor=(1,1,0,0))
 
 
@@ -307,7 +307,7 @@ class MultipleTargetTab(QWidget):
         """Un-highlight an input object by index."""
         if 0 <= index < len(self.items):
             item = self.items[index]
-        item.setStyleSheet("background-color: #ffffff;")
+            item.setStyleSheet("background-color: #ffffff;")
 
     def get_inputs(self):
         """Returns list of tuples [(x1, y1), (x2, y2), ...] matching active order."""

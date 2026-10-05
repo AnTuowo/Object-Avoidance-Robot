@@ -160,7 +160,7 @@ class NavigationPane(QFrame):
 
     def on_all_process_finish(self):
         if self.tabs.is_multi_target_tab_active():
-            self.tabs.multi_target_tab.unhighlight(self.process_manager.current_index)
+            self.tabs.multi_target_tab.unhighlight(self.process_manager.current_index - 1)
         self.tabs.setDisabled(False)
 
         if self.robot_connected:
@@ -184,7 +184,6 @@ class NavigationPane(QFrame):
         
     def state_toggle(self):
         self.robot_connected = not self.robot_connected
-        
         self.btn_start.setEnabled(self.robot_connected)
         if self.robot_connected == False:
             self.btn_start.setText("Start")
@@ -200,7 +199,8 @@ class NavigationPane(QFrame):
 
 
     def on_valid_input_state(self):
-        self.btn_start.setEnabled(True)
+        if self.robot_connected:
+            self.btn_start.setEnabled(True)
 
     def on_invalid_input_state(self):
         self.btn_start.setEnabled(False)
