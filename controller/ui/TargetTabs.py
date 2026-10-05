@@ -6,7 +6,7 @@ from PyQt5.QtWidgets import (
     QDialog, QFrame
 )
 from PyQt5.QtCore import Qt, QMimeData
-from PyQt5.QtGui import QDrag
+from PyQt5.QtGui import QDrag, QDoubleValidator
 
 from .CustomUI import *
 
