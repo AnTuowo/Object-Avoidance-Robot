@@ -1,181 +1,172 @@
-import sys
 from pathlib import Path
-from .PosePane import PosePane
-import subprocess
 
 from PyQt5.QtWidgets import (
-    QApplication, QWidget, QVBoxLayout, QHBoxLayout, 
-    QLabel, QLineEdit, QPushButton, QCheckBox,
-    QScrollArea, QGroupBox, QButtonGroup, QFrame,
-    QMessageBox
+    QVBoxLayout, QLabel,
+    QPushButton, QCheckBox,
+    QGroupBox, QFrame
 )
-from PyQt5.QtCore import pyqtSignal, QObject, QProcess
-from PyQt5.QtGui import QDoubleValidator
+
+from .TargetTabs import *
+
 from .CoordinateConversion import *
 from .ProcessManager import *
+from .CustomUI import *
 
 
 
 class NavigationPane(QFrame):
     def __init__(self, control_script_path: Path):
         super().__init__()
-        self.init_ui()
         self.control_script_path = str(control_script_path)
-        self.process = QProcess()
+        self.process_manager = ProcessManager(self.before_each_process, self.on_all_process_finish)
 
-    def init_ui(self):
-        self_layout = QVBoxLayout(self)
-        # Pose system Selector Checkbox
-        unit_layout = QHBoxLayout()
-        self.chk_unity = QCheckBox("Unity")
-        self.chk_ros = QCheckBox("Ros")
-        angle_option = QButtonGroup(self)
-        angle_option.setExclusive(True)
-        angle_option.addButton(self.chk_ros)
-        angle_option.addButton(self.chk_unity)
-        self.chk_ros.setChecked(True)
-        unit_layout.addWidget(QLabel("Pos System: "))
-        unit_layout.addWidget(self.chk_ros)
-        unit_layout.addWidget(self.chk_unity)
-        self_layout.addLayout(unit_layout)
-
-        # Input Group Box
-        input_group = QGroupBox("Target Navigation")
-        input_group_layout = QVBoxLayout(input_group)
+        self.init_fields()
+        self.configure_fields()
+        self.lay_layout()
         
-        validator = QDoubleValidator()
-        validator.setNotation(QDoubleValidator.StandardNotation)
-
-        # X Input
-        layout_x = QHBoxLayout()
-        layout_x.addWidget(QLabel("X: "))
-        self.input_x = QLineEdit()
-        self.input_x.setPlaceholderText("Enter float...")
-        self.input_x.setValidator(validator)
-        self.input_x.textChanged.connect(self.validate_inputs)
-        layout_x.addWidget(self.input_x)
-        input_group_layout.addLayout(layout_x)
-
-        # Y Input
-        layout_y_z = QHBoxLayout()
-        layout_y_z.addWidget(QLabel("Y(Ros) / Z(Unity): "))
-        self.input_y_z = QLineEdit()
-        self.input_y_z.setPlaceholderText("Enter float...")
-        self.input_y_z.setValidator(validator)
-        self.input_y_z.textChanged.connect(self.validate_inputs)
-        layout_y_z.addWidget(self.input_y_z)
-        input_group_layout.addLayout(layout_y_z)
 
 
-        # Start Button
-        button_group = QHBoxLayout()
+    # -------------------- INIT CONFIGURATION -------------------- 
+    def init_fields(self):
+        self.chk_unity = QCheckBox("Unity")
+        self.chk_ros = QCheckBox("Ros") 
+        # self.input_x = QLineEdit()
+        # self.input_y_z = QLineEdit()
+        self.tabs = TargetTabs(
+            tab_on_valid=self.on_valid_input_state, 
+            tab_on_invalid=self.on_invalid_input_state
+        )
         self.btn_start = QPushButton("Start")
+        self.btn_cancel = QPushButton("Cancel")
+        self.status_icon = StatusLabel()
+
+        self.dist_angle_err_label = QLabel()
+        self.robot_connected = False
+        self.target_pose = (None, None)
+        self.targets = []
+
+    def configure_fields(self):
+        self.chk_ros.setChecked(True)
+
         self.btn_start.setEnabled(False)
         self.btn_start.clicked.connect(self.on_start_clicked)
-        button_group.addWidget(self.btn_start)
-
-        # Cancel Button
-        self.btn_cancel = QPushButton("Cancel")
         self.btn_cancel.hide()
         self.btn_cancel.clicked.connect(self.on_cancel_clicked)
-        button_group.addWidget(self.btn_cancel)
 
-        # Status
-        self.status_icon = StatusLabel()
-        button_group.addWidget(self.status_icon)
+        CheckBoxGroup(self.chk_ros, self.chk_unity, parent_widget=self)
 
-        input_group_layout.addLayout(button_group)
-        self_layout.addWidget(input_group)
 
-    def validate_inputs(self):
-        txt_x = self.input_x.text().strip()
-        txt_y = self.input_y_z.text().strip()
+    def lay_layout(self):
+        # Pose system Selector Checkbox
+        unit_layout = initLayout("Pos System: ", self.chk_ros, self.chk_unity)
+        
+        # Input Group Box
+        button_group = initLayout(self.btn_start, self.btn_cancel, self.status_icon)
 
-        if not txt_x or not txt_y:
-            self.btn_start.setEnabled(False)
-            return
+        input_group = QGroupBox("Target Navigation")
 
-        try:
-            float(txt_x)
-            float(txt_y)
-            self.btn_start.setEnabled(True)
-        except ValueError:
-            self.btn_start.setEnabled(False)
+        initLayout(self.tabs,
+                   button_group,
+                   layout_class=QVBoxLayout,
+                   parent_widget=input_group)
+
+        initLayout(unit_layout,
+                   self.dist_angle_err_label,
+                   input_group,
+                   layout_class=QVBoxLayout,
+                   stretch_factor=(0, 0, 1),
+                   parent_widget=self)
+
+
+
+
+    # -------------------- INTERNAL HELPER METHODS --------------------
 
     def on_start_clicked(self):
         if self.btn_start.text() == "Start":
-            val_x = float(self.input_x.text().strip())
-            val_y = float(self.input_y_z.text().strip())
+            self.targets = self.tabs.get_current_tab_input_list()
 
             if self.chk_unity.isChecked():
-                val_x, val_y, _, _ = unity_to_ros(val_x, None, val_y, None)
+                self.targets = [
+                    unity_to_ros(x, None, y, None)[:2]
+                    for x, y in self.targets
+                ]
+
+            self.process_manager.execute(
+                                            [
+                                                build_command_dict("python3", 
+                                                                    self.control_script_path, 
+                                                                    str(x), str(y)
+                                                                    ) for x, y in self.targets
+                                            ]
+                                        )
 
             self.on_process_start()
-            print(f"Executing script with target ROS parameters -> X: {val_x}, Y: {val_y}")
-            self.process = QProcess(self)
-            self.process.finished.connect(self.on_process_finish)
-            self.process.start("python3", [self.control_script_path, str(val_x), str(val_y)])
 
-            self.btn_cancel.show()
         elif self.btn_start.text() == "Pause":
-            pause_process(self.process)
+            self.process_manager.pause_current()
             self.btn_start.setText("Resume")
         elif self.btn_start.text() == "Resume":
-            resume_process(self.process)
+            self.process_manager.resume_current()
             self.btn_start.setText("Pause")
-        
-
-
-    def on_process_start(self):
-        self.status_icon.running_state()
-        self.btn_start.setText("Pause")
-    def on_process_finish(self):
-        self.status_icon.success_state()
-        self.btn_start.setText("Start")
-        self.btn_cancel.hide()
 
 
     def on_cancel_clicked(self):
         self.btn_cancel.hide()
-        cancel_process(self.process)
+        self.process_manager.cancel_process()
         
 
 
+    def on_process_start(self):
+        self.tabs.setDisabled(True)
+        self.status_icon.running_state()
+        self.btn_start.setText("Pause")
+        self.btn_cancel.show()
+        self.dist_angle_err_label.show()
+
+    def on_all_process_finish(self):
+        if self.tabs.is_multi_target_tab_active():
+            self.tabs.multi_target_tab.unhighlight(self.process_manager.current_index - 1)
+        self.tabs.setDisabled(False)
+
+        if self.robot_connected:
+            self.status_icon.success_state()
+        else:
+            self.status_icon.fail_state()
+        self.btn_start.setText("Start")
+        self.btn_cancel.hide()
+        self.dist_angle_err_label.hide()
+        self.target_pose = (None, None)
 
 
+    def before_each_process(self):
+        if self.tabs.is_multi_target_tab_active():
+            self.tabs.multi_target_tab.unhighlight(self.process_manager.current_index - 1)
+            self.tabs.multi_target_tab.center_and_highlight(self.process_manager.current_index)
+        self.target_pose = self.targets[self.process_manager.current_index]
+        print(f"Executing script with target ROS parameters -> X: {self.target_pose[0]}, Y: {self.target_pose[1]}")
 
 
+        
+    def state_toggle(self):
+        self.robot_connected = not self.robot_connected
+        self.btn_start.setEnabled(self.robot_connected)
+        if self.robot_connected == False:
+            self.btn_start.setText("Start")
+            self.process_manager.cancel_process()
 
-class StatusLabel(QPushButton):
-    def __init__(self):
-        super().__init__()
-        self.hide()
-        self.clicked.connect(self.hide)
-        self.style_format_str = """
-            QPushButton {
-                background-color: %s;
-                color: %s;
-                border: 2px solid %s;
-                border-radius: 50px;
-                font-weight: bold;
-            }
+    def update_dist_err(self, x, y, yaw):
+        val_x, val_y = self.target_pose  # Ros sys
+        if val_x is not None and val_y is not None:
+            dist, err = get_dist_angle_err(val_x, val_y, x, y, yaw)
+            self.dist_angle_err_label.setText(
+                f"Dist: {dist:.2f} m  |  Angle Error: {math.degrees(err):.1f}°"
+                )
 
-            QPushButton:hover {
-                background-color: gainsboro;
-            }
-        """
-    def running_state(self):
-        self.show()
-        self.setEnabled(False)
-        self.setText("Running")
-        self.setStyleSheet(self.style_format_str % ("LemonChiffon", "Gold", "Gold"))
-    def success_state(self):
-        self.show()
-        self.setEnabled(True)
-        self.setText("Done  [x]")
-        self.setStyleSheet(self.style_format_str % ("HoneyDew", "SpringGreen", "SpringGreen"))
-    def fail_state(self):
-        self.show()
-        self.setEnabled(True)
-        self.setText("Failed  [x]")
-        self.setStyleSheet(self.style_format_str % ("LightPink", "Red", "Red"))
+
+    def on_valid_input_state(self):
+        if self.robot_connected:
+            self.btn_start.setEnabled(True)
+
+    def on_invalid_input_state(self):
+        self.btn_start.setEnabled(False)
