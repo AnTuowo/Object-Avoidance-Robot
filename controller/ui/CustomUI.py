@@ -1,10 +1,8 @@
 from PyQt5.QtWidgets import (
-    QLayout, QWidget, QVBoxLayout, QHBoxLayout, 
-    QLabel, QLineEdit, QPushButton, QCheckBox,
-    QGroupBox, QButtonGroup, QFrame, QMessageBox
+    QLayout, QWidget, QHBoxLayout, 
+    QLabel, QPushButton, QCheckBox,
+    QButtonGroup, QMessageBox
 )
-from PyQt5.QtCore import QProcess
-from PyQt5.QtGui import QDoubleValidator
 from typing import Type, Union
 import subprocess
 

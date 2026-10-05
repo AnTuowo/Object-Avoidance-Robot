@@ -1,21 +1,11 @@
-import sys
 from pathlib import Path
-import signal
-
-import rospy
-from nav_msgs.msg import Odometry
-
-from .PosePane import PosePane
-from .NavigatePane import NavigationPane
 
 from .CoordinateConversion import *
 from .CustomUI import *
 
 from PyQt5.QtWidgets import (
-    QApplication, QWidget, QVBoxLayout, 
     QFrame, QPushButton
 )
-from PyQt5.QtCore import pyqtSignal, QObject,  QTimer
 
 
 

@@ -15,8 +15,7 @@ from .CoordinateConversion import *
 from .CustomUI import *
 
 from PyQt5.QtWidgets import (
-    QApplication, QWidget, QVBoxLayout, 
-    QFrame, QPushButton
+    QApplication, QWidget, QVBoxLayout, QFrame
 )
 from PyQt5.QtCore import pyqtSignal, QObject,  QTimer
 
@@ -136,7 +135,6 @@ if __name__ == "__main__":
     app.aboutToQuit.connect(cleanup)
 
     window = RobotControllerUI()
-    # window.navigate_frame.tabs.multi_target_tab.add_item(50, 600)
     window.show()
 
     sys.exit(app.exec_())

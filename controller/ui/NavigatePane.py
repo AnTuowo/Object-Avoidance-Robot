@@ -1,12 +1,10 @@
 from pathlib import Path
 
 from PyQt5.QtWidgets import (
-    QVBoxLayout, QLabel, QLineEdit, 
+    QVBoxLayout, QLabel,
     QPushButton, QCheckBox,
     QGroupBox, QFrame
 )
-from PyQt5.QtCore import QProcess
-from PyQt5.QtGui import QDoubleValidator
 
 from .TargetTabs import *
 
@@ -50,17 +48,6 @@ class NavigationPane(QFrame):
     def configure_fields(self):
         self.chk_ros.setChecked(True)
 
-        # validator = QDoubleValidator()
-        # validator.setNotation(QDoubleValidator.StandardNotation)
-
-        # self.input_x.setPlaceholderText("Enter float...")
-        # self.input_x.setValidator(validator)
-        # self.input_x.textChanged.connect(self.validate_inputs)
-
-        # self.input_y_z.setPlaceholderText("Enter float...")
-        # self.input_y_z.setValidator(validator)
-        # self.input_y_z.textChanged.connect(self.validate_inputs)
-
         self.btn_start.setEnabled(False)
         self.btn_start.clicked.connect(self.on_start_clicked)
         self.btn_cancel.hide()
@@ -74,16 +61,9 @@ class NavigationPane(QFrame):
         unit_layout = initLayout("Pos System: ", self.chk_ros, self.chk_unity)
         
         # Input Group Box
-        # layout_x = initLayout("X: ", self.input_x, stretch_factor=(3, 7))
-        # layout_y_z = initLayout("Y(Ros) / Z(Unity): ", self.input_y_z, stretch_factor=(3, 7))
         button_group = initLayout(self.btn_start, self.btn_cancel, self.status_icon)
 
         input_group = QGroupBox("Target Navigation")
-        # initLayout(layout_x,
-        #            layout_y_z,
-        #            button_group,
-        #            layout_class=QVBoxLayout,
-        #            parent_widget=input_group)
 
         initLayout(self.tabs,
                    button_group,
@@ -101,23 +81,9 @@ class NavigationPane(QFrame):
 
 
     # -------------------- INTERNAL HELPER METHODS --------------------
-    # def validate_inputs(self):
-    #     if self.robot_connected:
-    #         txt_x = self.input_x.text().strip()
-    #         txt_y = self.input_y_z.text().strip()
-
-    #         if not txt_x or not txt_y:
-    #             self.btn_start.setEnabled(False)
-    #             return
-    #         self.btn_start.setEnabled(True)
-
 
     def on_start_clicked(self):
         if self.btn_start.text() == "Start":
-            # val_x = float(self.input_x.text().strip())
-            # val_y_z = float(self.input_y_z.text().strip())
-
-            # self.targets = [(val_x, val_y_z)]
             self.targets = self.tabs.get_current_tab_input_list()
 
             if self.chk_unity.isChecked():
@@ -204,9 +170,3 @@ class NavigationPane(QFrame):
 
     def on_invalid_input_state(self):
         self.btn_start.setEnabled(False)
-
-
-
-
-
-

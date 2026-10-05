@@ -1,12 +1,12 @@
 from __future__ import annotations
 import sys
 from PyQt5.QtWidgets import (
-    QApplication, QMainWindow, QTabWidget, QWidget, QVBoxLayout, 
-    QHBoxLayout, QLabel, QLineEdit, QPushButton, QScrollArea, 
-    QDialog, QFormLayout, QFrame, QMessageBox, QTabBar
+    QApplication, QTabWidget, QWidget, QVBoxLayout, 
+    QLabel, QLineEdit, QPushButton, QScrollArea, 
+    QDialog, QFrame
 )
 from PyQt5.QtCore import Qt, QMimeData
-from PyQt5.QtGui import QDrag, QPixmap, QColor
+from PyQt5.QtGui import QDrag
 
 from .CustomUI import *
 

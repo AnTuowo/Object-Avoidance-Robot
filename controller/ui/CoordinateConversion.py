@@ -40,4 +40,4 @@ def get_dist_angle_err(target_x: float, target_y: float, curr_x: float, curr_y: 
     # Normalize angle to range [-pi, pi]
     normalized_ang_err = math.atan2(math.sin(angle_err), math.cos(angle_err)) # Unit: rad
 
-    return dist, angle_err
+    return dist, normalized_ang_err
