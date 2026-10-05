@@ -12,7 +12,7 @@ from .PosePane import PosePane
 from .NavigatePane import NavigationPane
 from .LauncherPane import LauncherPane
 from .CoordinateConversion import *
-from .CustomUI import ros_launch_msg_box
+from .CustomUI import *
 
 from PyQt5.QtWidgets import (
     QApplication, QWidget, QVBoxLayout, 
@@ -60,28 +60,27 @@ class RobotControllerUI(QWidget):
         self.setWindowTitle("Robot Controller")
         self.resize(450, 600)
 
-        main_layout = QVBoxLayout(self)
-
-        self.launcher_frame = QFrame()
-        self.launch_endpoint = QPushButton("Launch_endpoint")
-
         self.launcher_frame = LauncherPane(ROS_SETUP_PATH)
         self.launcher_frame.setFrameShape(QFrame.Box)
         self.launcher_frame.setFrameShadow(QFrame.Raised)
         self.launcher_frame.setLineWidth(2)
-        main_layout.addWidget(self.launcher_frame)
 
         self.pose_frame = PosePane()
         self.pose_frame.setFrameShape(QFrame.Box)
         self.pose_frame.setFrameShadow(QFrame.Raised)
         self.pose_frame.setLineWidth(2)
-        main_layout.addWidget(self.pose_frame)
 
         self.navigate_frame = NavigationPane(control_script_path=CONTROL_ROBOT_PATH)
         self.navigate_frame.setFrameShape(QFrame.Box)
         self.navigate_frame.setFrameShadow(QFrame.Raised)
         self.navigate_frame.setLineWidth(2)
-        main_layout.addWidget(self.navigate_frame)
+
+        initLayout(self.launcher_frame,
+                   self.pose_frame,
+                   self.navigate_frame,
+                   layout_class=QVBoxLayout,
+                   stretch_factor=(0, 0, 1),
+                   parent_widget=self)
 
 
     # ------------------ ROS SECTION ------------------

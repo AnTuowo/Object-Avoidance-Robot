@@ -18,6 +18,7 @@ class NavigationPane(QFrame):
     def __init__(self, control_script_path: Path):
         super().__init__()
         self.control_script_path = str(control_script_path)
+        self.process_manager = ProcessManager(self.before_each_process, self.on_all_process_finish)
 
         self.init_fields()
         self.configure_fields()
@@ -27,7 +28,6 @@ class NavigationPane(QFrame):
 
     # -------------------- INIT CONFIGURATION -------------------- 
     def init_fields(self):
-        self.process = QProcess()
         self.chk_unity = QCheckBox("Unity")
         self.chk_ros = QCheckBox("Ros") 
         self.input_x = QLineEdit()
@@ -39,10 +39,9 @@ class NavigationPane(QFrame):
         self.dist_angle_err_label = QLabel()
         self.robot_connected = False
         self.target_pose = (None, None)
+        self.targets = []
 
     def configure_fields(self):
-        self.process.finished.connect(self.on_process_finish)
-
         self.chk_ros.setChecked(True)
 
         validator = QDoubleValidator()
@@ -69,8 +68,8 @@ class NavigationPane(QFrame):
         unit_layout = initLayout("Pos System: ", self.chk_ros, self.chk_unity)
         
         # Input Group Box
-        layout_x = initLayout("X: ", self.input_x)
-        layout_y_z = initLayout("Y(Ros) / Z(Unity): ", self.input_y_z)
+        layout_x = initLayout("X: ", self.input_x, stretch_factor=(3, 7))
+        layout_y_z = initLayout("Y(Ros) / Z(Unity): ", self.input_y_z, stretch_factor=(3, 7))
         button_group = initLayout(self.btn_start, self.btn_cancel, self.status_icon)
 
         input_group = QGroupBox("Target Navigation")
@@ -84,6 +83,7 @@ class NavigationPane(QFrame):
                    self.dist_angle_err_label,
                    input_group,
                    layout_class=QVBoxLayout,
+                   stretch_factor=(0, 0, 1),
                    parent_widget=self)
 
 
@@ -106,26 +106,36 @@ class NavigationPane(QFrame):
             val_x = float(self.input_x.text().strip())
             val_y_z = float(self.input_y_z.text().strip())
 
-            if self.chk_unity.isChecked():
-                val_x, val_y_z, _, _ = unity_to_ros(val_x, None, val_y_z, None)
+            self.targets = [(val_x, val_y_z)]
 
-            self.target_pose = (val_x, val_y_z)
+            if self.chk_unity.isChecked():
+                self.targets = [
+                    unity_to_ros(x, None, y, None)[:2]
+                    for x, y in self.targets
+                ]
+
+            self.process_manager.execute(
+                                            [
+                                                build_command_dict("python3", 
+                                                                    self.control_script_path, 
+                                                                    str(x), str(y)
+                                                                    ) for x, y in self.targets
+                                            ]
+                                        )
 
             self.on_process_start()
-            print(f"Executing script with target ROS parameters -> X: {val_x}, Y: {val_y_z}")
-            self.process.start("python3", [self.control_script_path, str(val_x), str(val_y_z)])
 
         elif self.btn_start.text() == "Pause":
-            pause_process(self.process)
+            self.process_manager.pause_current()
             self.btn_start.setText("Resume")
         elif self.btn_start.text() == "Resume":
-            resume_process(self.process)
+            self.process_manager.resume_current()
             self.btn_start.setText("Pause")
 
 
     def on_cancel_clicked(self):
         self.btn_cancel.hide()
-        cancel_process(self.process)
+        self.process_manager.cancel_process()
         
 
 
@@ -135,7 +145,7 @@ class NavigationPane(QFrame):
         self.btn_cancel.show()
         self.dist_angle_err_label.show()
 
-    def on_process_finish(self):
+    def on_all_process_finish(self):
         if self.robot_connected:
             self.status_icon.success_state()
         else:
@@ -146,13 +156,18 @@ class NavigationPane(QFrame):
         self.target_pose = (None, None)
 
 
+    def before_each_process(self):
+        self.target_pose = self.targets[self.process_manager.current_index]
+        print(f"Executing script with target ROS parameters -> X: {self.target_pose[0]}, Y: {self.target_pose[1]}")
+
+
         
     def state_toggle(self):
         self.robot_connected = not self.robot_connected
         self.btn_start.setEnabled(self.robot_connected)
         if self.robot_connected == False:
             self.btn_start.setText("Start")
-            cancel_process(self.process)
+            self.process_manager.cancel_process()
 
     def update_dist_err(self, x, y, yaw):
         val_x, val_y = self.target_pose  # Ros sys

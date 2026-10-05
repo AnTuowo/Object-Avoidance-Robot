@@ -14,7 +14,8 @@ import subprocess
 
 def initLayout( *args: any,
                 layout_class: Type[QLayout] = QHBoxLayout, 
-                parent_widget = None
+                parent_widget = None,
+                stretch_factor: tuple = None
                 ):
     container_layout = layout_class(parent_widget)
     for ele in args:
@@ -24,6 +25,9 @@ def initLayout( *args: any,
             container_layout.addWidget(ele)
         else:
             container_layout.addWidget(QLabel(str(ele)))
+    if stretch_factor is not None and len(stretch_factor) == len(args):
+        for i in range(0, len(stretch_factor), 1):
+            container_layout.setStretch(i, stretch_factor[i])
     return container_layout
                 
 
@@ -75,6 +79,9 @@ class StatusLabel(QPushButton):
         self.set_state("Done  [x]", "HoneyDew", "SpringGreen")
     def fail_state(self):
         self.set_state("Failed  [x]", "LightPink", "Red")
+
+
+
 
 
 
