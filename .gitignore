@@ -34,4 +34,4 @@ __pycache__/
 
 # ---- device ----
 .vscode
-unity-project/
+# unity-project/
